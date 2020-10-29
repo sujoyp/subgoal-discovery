@@ -24,6 +24,7 @@ def gen_new_labels(dataset, model, args, device):
     np.save('./labels/' + args.model_name + '.npy', labels)
 
 
+
         
 
     

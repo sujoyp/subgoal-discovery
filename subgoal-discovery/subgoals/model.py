@@ -29,7 +29,7 @@ class ConvModel(nn.Module):
         self.fc = nn.Linear(32*9*9, 256, bias=bias)
         self.lstm = nn.LSTMCell(256, 256) if use_rnn else None
         self.subgoal_linear = nn.Linear(256, num_subgoals, bias=bias)
-	self.use_rnn = use_rnn
+        self.use_rnn = use_rnn
 
         self.apply(weights_init)
 

@@ -10,12 +10,6 @@ import time
 import pylab as pl
 torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
-def ensure_shared_grads(model, shared_model):
-    for param, shared_param in zip(model.parameters(), shared_model.parameters()):
-        if shared_param.grad is not None:
-            return
-        shared_param._grad = param.grad
-
 def MILL(subgoal_prediction, batch_size, labels, device):
     ''' subgoal_prediction should be list of dimension (B, ) where each element is (n_steps, n_subgoals),
         labels should have same structure as subgoal_predictions but 0/1 inputs'''
@@ -23,7 +17,7 @@ def MILL(subgoal_prediction, batch_size, labels, device):
     milloss = 0.
     for i in range(batch_size):
         milloss = milloss - torch.mean(torch.sum(Variable(labels[i]) \
-            * torch.log(F.softmax(subgoal_prediction[i], dim=1)), dim=1))
+            * torch.log_softmax(subgoal_prediction[i], dim=1), dim=1))
     return milloss / batch_size
     
 
@@ -72,7 +66,7 @@ def train(itr, dataset, args, model, optimizer, logger, device, c):
         
     milloss = MILL(subgoal_predictions, args.batch_size, labels, device)
     casloss = CASL(final_features, subgoal_predictions, labels, args.batch_size, device)
-    onecloss = OnCL(final_features, c)
+    onecloss = OnCL(final_features, c) if args.one_class else 0.
 
     total_loss = 0.5 * milloss + 0.5 * casloss + 0.01 * onecloss
         

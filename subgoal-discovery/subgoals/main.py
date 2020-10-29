@@ -1,12 +1,12 @@
 from __future__ import print_function
-import argparse, os, torch, numpy as np, time, 
-from model import SubgoalPrediction, MLPModel
+import argparse, os, torch, numpy as np, time
+from model import MLPModel, ConvModel
 from load_data import Dataset
 from test import test
 from train import train
 from gen_new_labels import gen_new_labels
 from tensorboard_logger import Logger
-import options, misc
+import options
 import torch.optim as optim
 from torch.autograd import Variable
 
@@ -26,6 +26,7 @@ def get_c(dataset, model, args):
 if __name__ == '__main__':
 
     args = options.parser.parse_args()
+    print(args)
     torch.manual_seed(args.seed)
     device = torch.device("cuda")
 
@@ -41,36 +42,35 @@ if __name__ == '__main__':
        os.makedirs('./c/')
 
     dataset = Dataset(args)
-    change_itr = range(12000, 100000, 4000)
+    change_itr = range(8000, 100000, 4000)
     logger = Logger('./logs/' + args.model_name)
     if args.env_name == 'bimgame':
-        model = ConvModel(3, args.num_subgoals, args.use_rnn).to(device)
+        model = ConvModel(3, args.num_subgoals, use_rnn=False).to(device)
     else:
-        model = MLPModel(46, args.num_subgoals, args.use_rnn).to(device)
+        model = MLPModel(46, args.num_subgoals, use_rnn=False).to(device)
 
     start_itr = 0
     c = []
-    if args.pretrained_ckpt is not None:
-       model.load_state_dict(torch.load('./ckpt/' + args.pretrained_ckpt + '.pkl'))
-       start_itr = np.load('./iter_num/' + args.pretrained_ckpt + '.npy')
-       c = torch.from_numpy(np.load('./c/' + args.pretrained_ckpt + '.npy')).float().to(device)
-
-    # computing initial c for one-class out-of-set estimation
-    if len(c) == 0:
-       c = get_c(dataset, model, args)
+    if args.one_class:
+      if args.pretrained_ckpt is not None:
+        model.load_state_dict(torch.load('./ckpt/' + args.pretrained_ckpt + '.pkl'))
+        start_itr = np.load('./iter_num/' + args.pretrained_ckpt + '.npy')
+        c = torch.from_numpy(np.load('./c/' + args.pretrained_ckpt + '.npy')).float().to(device)
+      # computing initial c for one-class out-of-set estimation
+      if len(c) == 0:
+        c = get_c(dataset, model, args)
        
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0.0005)
     
     for itr in range(start_itr, args.max_iter):
        train(itr, dataset, args, model, optimizer, logger, device, c)
-       if itr % 50 == 0 and itr <= 500:
-          c = get_c(dataset, model, args)
        if  itr % 500 == 0:
           torch.save(model.state_dict(), './ckpt/' + args.model_name + '.pkl')
           np.save('./iter_num/' + args.model_name + '.npy', itr)
           np.save('./labels/' + args.model_name + '.npy', dataset.labels)
-          misc.process(args)
        if itr in change_itr:
           gen_new_labels(dataset, model, args, device)
+       if args.one_class and itr % 50 == 0 and itr <= 500:
+          c = get_c(dataset, model, args)
 
     

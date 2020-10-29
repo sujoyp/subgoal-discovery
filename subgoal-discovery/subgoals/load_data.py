@@ -9,7 +9,7 @@ class Dataset():
         self.env = args.env_name
         self.num_subgoals = args.num_subgoals
         self.state_size = args.state_size
-        self.path_to_trajectories = sorted(glob.glob(args.path_to_trajectories))
+        self.path_to_trajectories = sorted(glob.glob(args.path_to_trajectories + '/*'))
         self.batch_size = args.batch_size
         self.trainidx = []
         self.testidx = []
