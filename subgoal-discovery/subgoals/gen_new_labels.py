@@ -16,8 +16,6 @@ def gen_new_labels(dataset, model, args, device):
         trajectory = np.load(t)
         output = model((Variable(torch.from_numpy(trajectory).float().cuda()), ((), ())))[0]
         lab = utils.getAssignment(F.softmax(output, dim=1).data.cpu().numpy(), args.num_subgoals)
-        lab = np.argmax(F.softmax(output, dim=1).data.cpu().numpy(), axis=1)
-        lab = np.array([np.eye(output.shape[1])[l] for l in lab])
         labels.append(lab)
    
     dataset.labels = labels
